@@ -141,7 +141,14 @@ def lookupCache(osClient, redisClient, cfg, docType, queryText, scope=None):
 
 
 def storeCache(osClient, redisClient, cfg, docType, queryText, ragResult, scope=None, queryVector=None):
-    """새 질문-답변을 캐시에 적재 (Redis: 답변 payload, OpenSearch: 임베딩+메타)."""
+    """새 질문-답변을 캐시에 적재 (Redis: 답변 payload, OpenSearch: 임베딩+메타).
+
+    summary/points/list_items가 모두 비어 있으면(검색 결과 없음 또는 LLM이
+    "관련 정보를 찾지 못했습니다"로 답한 경우) 캐싱하지 않는다 — 실패 응답이
+    캐시되면 이후 비슷한 문구의 정상 질문까지 같은 실패 응답을 재사용하게 된다.
+    """
+    if not ragResult.get("summary") and not ragResult.get("points") and not ragResult.get("list_items"):
+        return
     try:
         if queryVector is None:
             queryVector = embedQuery(cfg, queryText)

@@ -121,11 +121,12 @@ class QueryResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     """서버 상태 응답 스키마"""
-    success:      bool
-    law_articles: int
-    embedded:     int
-    embed_model:  str
-    llm_model:    str
+    success:         bool
+    law_articles:    int
+    embedded:        int
+    hazard_products: int
+    embed_model:     str
+    llm_model:       str
 
 
 # ============================================================
@@ -159,10 +160,15 @@ def status():
             index="law-articles",
             body={"query": {"exists": {"field": "knn_vector"}}}
         )["count"]
+        hazardCount = osClient.count(
+            index="hazard-products",
+            body={"query": {"match_all": {}}}
+        )["count"]
         return StatusResponse(
             success=True,
             law_articles=docCount,
             embedded=vecCount,
+            hazard_products=hazardCount,
             embed_model=cfg['embedModel'],
             llm_model=cfg['llmModel'],
         )
