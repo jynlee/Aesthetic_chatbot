@@ -49,6 +49,25 @@ CREATE TABLE IF NOT EXISTS law_article_history (
 CREATE INDEX IF NOT EXISTS idx_law_article_history_lookup
     ON law_article_history (law_mst_id, article_no, clause_no);
 
+-- 문서 단위 공통 메타데이터 (law-articles + hazard-products 공통 구조).
+-- 검색용 원본(content, knn_vector 등)은 계속 OpenSearch에만 있고, 여기는
+-- 문서 조회·관리용으로 OpenSearch 메타 필드 일부를 복제해 둔다.
+-- source별 고유 필드(law_mst_id/article_no 또는 api_type 등)는 extra(JSONB)에 담는다.
+CREATE TABLE IF NOT EXISTS document_meta (
+    id              SERIAL PRIMARY KEY,
+    doc_id          VARCHAR(200) NOT NULL UNIQUE,   -- OpenSearch _id와 동일
+    os_index        VARCHAR(50)  NOT NULL,          -- 'law-articles' | 'hazard-products'
+    source          VARCHAR(30)  NOT NULL,          -- 'law' | 'hazard'
+    sector          VARCHAR(50),
+    content_hash    VARCHAR(64),
+    collected_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    extra           JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_meta_os_index ON document_meta (os_index);
+CREATE INDEX IF NOT EXISTS idx_document_meta_sector   ON document_meta (sector);
+
 -- 수집 대상 법령 등록 (MST ID는 collect_law.py LAW_MAP 기준)
 INSERT INTO law_sync_meta (law_name, law_mst_id) VALUES
     ('공중위생관리법', '259521'),

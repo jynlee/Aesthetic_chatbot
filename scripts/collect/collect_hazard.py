@@ -26,7 +26,10 @@ import time
 from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
-from mazel_common import loadConfig, retryGet, getOsClient, getDbConn, recordLog, updateHazardMeta
+from mazel_common import (
+    loadConfig, retryGet, getOsClient, getDbConn, hashContent,
+    recordLog, updateHazardMeta, upsertDocumentMeta,
+)
 from opensearchpy import helpers
 
 
@@ -285,7 +288,17 @@ def collectOneType(cfg, osClient, dbConn, apiType):
             print(f"  [WARN] 인덱싱 오류 {len(errors)}건: {errors[0]}")
         print(f"  인덱싱 완료: {successCount}건 (원본 수집 {rawCount}건 중 국내/미상 필터 후)")
 
-        # STEP C: 수집 이력 기록 (fetched=원본 API 수신량, indexed=필터 후 실제 색인량)
+        # STEP C: 문서 단위 공통 메타 Postgres 반영 (document_meta, law/hazard 공통 구조)
+        # hazard-products는 OpenSearch 매핑에 content_hash가 없어서 content로 직접 계산
+        for i in range(0, len(allDocs)):
+            src = allDocs[i]["_source"]
+            upsertDocumentMeta(
+                dbConn, allDocs[i]["_id"], INDEX_NAME, "hazard",
+                src["sector"], hashContent(src["content"]),
+                extra={"api_type": src["api_type"]},
+            )
+
+        # STEP D: 수집 이력 기록 (fetched=원본 API 수신량, indexed=필터 후 실제 색인량)
         recordLog(dbConn, source, "success", fetched=rawCount, indexed=successCount)
         updateHazardMeta(dbConn, apiType, successCount)
         return successCount

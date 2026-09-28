@@ -14,14 +14,16 @@ PostgreSQL collection_log / law_sync_meta 에 수집 이력 기록.
 # ============================================================
 
 import argparse
-import hashlib
 import os
 import sys
 import json
 from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
-from mazel_common import loadConfig, retryGet, getOsClient, getDbConn, recordLog, updateLawMeta, recordLawHistory
+from mazel_common import (
+    loadConfig, retryGet, getOsClient, getDbConn, hashContent,
+    recordLog, updateLawMeta, recordLawHistory, upsertDocumentMeta,
+)
 from opensearchpy import helpers
 
 
@@ -121,11 +123,6 @@ def parseDate(rawDate):
     if len(cleaned) == 8 and cleaned.isdigit():
         return cleaned
     return None
-
-
-def hashContent(content):
-    """content 문자열의 SHA-256 해시(hex). 재수집 시 변경 여부 비교용."""
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
 def parseClauses(lawData, mstId, lawInfo):
@@ -356,7 +353,21 @@ def collectOneLaw(cfg, osClient, dbConn, mstId):
             print(f"  [WARN] 인덱싱 오류 {len(errors)}건: {errors[0]}")
         print(f"  인덱싱 완료: {indexedCount}건")
 
-        # STEP D: 수집 이력 기록
+        # STEP D: 문서 단위 공통 메타 Postgres 반영 (document_meta, law/hazard 공통 구조)
+        for i in range(0, len(docsToIndex)):
+            src = docsToIndex[i]["_source"]
+            upsertDocumentMeta(
+                dbConn, docsToIndex[i]["_id"], INDEX_NAME, "law",
+                src["sector"], src["content_hash"],
+                extra={
+                    "law_mst_id": src["law_mst_id"],
+                    "law_name":   src["law_name"],
+                    "article_no": src["article_no"],
+                    "clause_no":  src["clause_no"],
+                },
+            )
+
+        # STEP E: 수집 이력 기록
         # doc_count는 "이번에 바뀐 건수"가 아니라 법령 전체 조문 수를 뜻하므로 fetchedCount 사용
         recordLog(dbConn, source, "success", fetched=fetchedCount, indexed=indexedCount)
         updateLawMeta(dbConn, mstId, fetchedCount)

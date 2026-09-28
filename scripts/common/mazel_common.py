@@ -4,25 +4,29 @@ mazel_common.py
 마젤원향 에스테틱 법률 안전 챗봇 — 공통 유틸리티
 
 포함 함수:
-- loadConfig      : .env 로드 → 설정 딕셔너리 반환
-- retryGet        : GET 요청 실패 시 최대 N회 재시도 (선형 백오프)
-- getOsClient     : OpenSearch 클라이언트 반환
-- getDbConn       : PostgreSQL 연결 반환
-- recordLog       : collection_log 테이블에 수집 이력 기록
-- updateLawMeta   : law_sync_meta 동기화 상태 업데이트
-- updateHazardMeta: hazard_sync_meta 동기화 상태 업데이트
-- recordLawHistory: law_article_history 테이블에 조문 변경 이력 기록
+- loadConfig        : .env 로드 → 설정 딕셔너리 반환
+- retryGet          : GET 요청 실패 시 최대 N회 재시도 (선형 백오프)
+- getOsClient       : OpenSearch 클라이언트 반환
+- getDbConn         : PostgreSQL 연결 반환
+- hashContent       : 문서 content의 SHA-256 해시 (변경 감지용, law/hazard 공통)
+- recordLog         : collection_log 테이블에 수집 이력 기록
+- updateLawMeta     : law_sync_meta 동기화 상태 업데이트
+- updateHazardMeta  : hazard_sync_meta 동기화 상태 업데이트
+- recordLawHistory  : law_article_history 테이블에 조문 변경 이력 기록
+- upsertDocumentMeta: document_meta 테이블에 문서 단위 공통 메타 upsert (law/hazard 공통)
 """
 
 # ============================================================
 # 라이브러리 임포트
 # ============================================================
 
+import hashlib
 import os
 import time
 import requests
 import psycopg2
 from dotenv import load_dotenv
+from psycopg2.extras import Json
 from opensearchpy import OpenSearch
 
 
@@ -105,6 +109,15 @@ def retryGet(url, params, maxRetry=5, sleepSec=2):
         except Exception as e:
             raise
     raise lastErr or RuntimeError("retryGet 최대 재시도 초과")
+
+
+# ============================================================
+# 콘텐츠 해시
+# ============================================================
+
+def hashContent(content):
+    """content 문자열의 SHA-256 해시(hex). 재수집 시 변경 여부 비교용 (law/hazard 공통)."""
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
 # ============================================================
@@ -245,3 +258,38 @@ def recordLawHistory(conn, lawMstId, articleNo, clauseNo, oldContent, newContent
     except Exception as e:
         conn.rollback()
         print({"success": False, "message": f"recordLawHistory 실패: {e}"})
+
+
+# ============================================================
+# 문서 단위 공통 메타데이터 (law-articles + hazard-products 공통)
+# ============================================================
+
+def upsertDocumentMeta(conn, docId, osIndex, source, sector, contentHash, extra=None):
+    """
+    document_meta 테이블에 문서 단위 공통 메타를 upsert.
+    검색용 원본(content, knn_vector 등)은 OpenSearch에만 두고, 여기는
+    OpenSearch 메타 필드(sector, content_hash) 일부를 조회·관리용으로 복제한다.
+    docId    : OpenSearch _id와 동일 (예: law_270323_15_2, hazard_recall_12)
+    osIndex  : 'law-articles' | 'hazard-products'
+    source   : 'law' | 'hazard'
+    extra    : source별 고유 필드 dict (law_mst_id/article_no 또는 api_type 등) → JSONB로 저장
+    이미 있는 doc_id는 sector/content_hash/extra/updated_at만 갱신한다.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """INSERT INTO document_meta
+               (doc_id, os_index, source, sector, content_hash, extra)
+               VALUES (%s, %s, %s, %s, %s, %s)
+               ON CONFLICT (doc_id) DO UPDATE SET
+                   sector       = EXCLUDED.sector,
+                   content_hash = EXCLUDED.content_hash,
+                   extra        = EXCLUDED.extra,
+                   updated_at   = NOW()""",
+            (docId, osIndex, source, sector, contentHash, Json(extra) if extra else None),
+        )
+        conn.commit()
+        cursor.close()
+    except Exception as e:
+        conn.rollback()
+        print({"success": False, "message": f"upsertDocumentMeta 실패: {e}"})
