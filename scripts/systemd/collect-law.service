@@ -1,0 +1,31 @@
+# RAG_Mazelone 법령 데이터 월간 갱신 (docs/11_law_update_pipeline.md 의 3단계를 그대로 실행)
+# 1) collect_law.py (content_hash 비교로 변경분만 처리) 2) embed_index.py (변경분만 재임베딩) 3) qa-cache 삭제
+# 실제 실행 내용은 collect-law-run.sh 참고.
+#
+# 설치 (smt17 쉘, root 권한 필요):
+#   sudo cp scripts/systemd/collect-law.service /etc/systemd/system/
+#   sudo cp scripts/systemd/collect-law.timer   /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now collect-law.timer
+#
+# 확인:
+#   systemctl list-timers collect-law.timer   # 다음 실행 예정 시각
+#   sudo systemctl start collect-law.service  # 지금 바로 1회 수동 실행(테스트용)
+#   journalctl -u collect-law.service -n 50   # 최근 실행 로그
+#
+# 주의: OpenSearch가 opensearch.service로 같이 systemd 전환되어 있다면 After=로 순서를 보장하지만,
+# 그렇지 않고 기존처럼 수동(nohup) 기동 방식이라면 타이머가 돌 때 OpenSearch가 안 떠 있을 경우
+# 이 job은 실패합니다. 실패해도 collect_law.py 자체가 PostgreSQL의 law_collection_log에
+# "failed" + 에러 메시지를 남기므로, journalctl 또는 해당 테이블에서 확인 가능합니다
+# (조용히 사라지지 않음).
+
+[Unit]
+Description=RAG_Mazelone 법령 데이터 월간 갱신 (수집+재임베딩+캐시무효화)
+After=network-online.target postgresql.service opensearch.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=smt17
+WorkingDirectory=/home/smt17/PROJECTS/RAG_Mazelone
+ExecStart=/bin/bash scripts/systemd/collect-law-run.sh
