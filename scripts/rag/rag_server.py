@@ -20,6 +20,7 @@ FastAPI RAG 서버 — Spring MVC에서 HTTP로 호출하는 내부 서비스.
 
 import os
 import sys
+import time
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
@@ -194,13 +195,24 @@ def ragQuery(req: QueryRequest):
         raise HTTPException(status_code=400, detail="query가 비어 있습니다.")
 
     try:
+        # 단계별 소요시간(ms) 계측 — 이후 기능 추가(쿼리 재작성, Neo4j 등)가
+        # 응답 속도를 늦추지 않았는지 비교하기 위한 기준값 로그
+        timings = {}
+        tStart  = time.perf_counter()
         cached, queryVector = lookupCache(osClient, redisClient, cfg, "law", req.query, scope=req.sector)
+        timings["cache_lookup"] = round((time.perf_counter() - tStart) * 1000)
         if cached:
             ragResult = cached
         else:
-            ragResult = runCombinedRag(osClient, cfg, req.query, sector=req.sector, topK=req.topk)
+            ragResult = runCombinedRag(osClient, cfg, req.query, sector=req.sector, topK=req.topk,
+                                       timings=timings)
+            tStore = time.perf_counter()
             storeCache(osClient, redisClient, cfg, "law", req.query, ragResult,
                        scope=req.sector, queryVector=queryVector)
+            timings["cache_store"] = round((time.perf_counter() - tStore) * 1000)
+        timings["total"] = round((time.perf_counter() - tStart) * 1000)
+        stages = " ".join(f"{k}={v}ms" for k, v in timings.items())
+        print(f"[TIMING] cache_hit={bool(cached)} {stages} query='{req.query[:30]}'")
 
         return QueryResponse(
             success=True,

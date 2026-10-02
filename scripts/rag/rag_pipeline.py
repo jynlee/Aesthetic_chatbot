@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import json
+import time
 import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "common"))
@@ -577,22 +578,32 @@ def runRag(osClient, cfg, userQuery, sector=None, topK=TOP_K):
 # 통합 RAG 실행 (법령 + 안전정보, LLM 생성 1회)
 # ============================================================
 
-def runCombinedRag(osClient, cfg, userQuery, sector=None, topK=TOP_K, hazardTopK=None):
+def runCombinedRag(osClient, cfg, userQuery, sector=None, topK=TOP_K, hazardTopK=None, timings=None):
     """
     법령(law-articles) + 안전정보(hazard-products) 검색을 모두 수행하되,
     LLM 생성은 한 번만 호출하는 통합 RAG 파이프라인.
     1. 하이브리드 검색 2회(법령/안전정보, 둘 다 OpenSearch라 빠름) → 2. Context 병합 → 3. LLM 생성 1회
     hazardTopK : 미지정(None)이면 getDynamicHazardTopK()로 질문 내용에 따라 자동 결정
+    timings    : dict를 넘기면 단계별 소요시간(ms)을 채워준다 (law_search/hazard_search/llm/suggest_check).
+                 반환값에 넣지 않고 인자로 받는 이유 — 반환값은 storeCache로 QA 캐시에
+                 그대로 저장되므로, 요청마다 다른 측정값이 캐시에 섞이지 않게 하기 위함.
     반환: {"answer": str, "sources": list, "results": list}
     """
+    if timings is None:
+        timings = {}
     if hazardTopK is None:
         hazardTopK = getDynamicHazardTopK(userQuery)
     print(f"[INFO] hazard topK 결정: {hazardTopK} (query='{userQuery[:30]}...')")
 
     # STEP A: 검색 (법령 + 안전정보, 둘 다 실행 — 병목 아님)
     hazardApiType = detectHazardApiType(userQuery)
+    t0 = time.perf_counter()
     lawResults    = searchHybrid(osClient, cfg, userQuery, sector=sector, topK=topK)
+    t1 = time.perf_counter()
     hazardResults = searchHazardHybrid(osClient, cfg, userQuery, apiType=hazardApiType, topK=hazardTopK)
+    t2 = time.perf_counter()
+    timings["law_search"]    = round((t1 - t0) * 1000)
+    timings["hazard_search"] = round((t2 - t1) * 1000)
 
     if not lawResults and not hazardResults:
         return {
@@ -625,9 +636,14 @@ def runCombinedRag(osClient, cfg, userQuery, sector=None, topK=TOP_K, hazardTopK
     else:
         prompt = buildPrompt(SYSTEM_PROMPT_COMBINED, context, userQuery)
 
+    t0 = time.perf_counter()
     answer = generateAnswer(cfg, prompt, stream=False)
+    t1 = time.perf_counter()
     answer, suggestions = extractSuggestions(answer)
     suggestions = filterGroundedSuggestions(osClient, cfg, suggestions)
+    t2 = time.perf_counter()
+    timings["llm"]           = round((t1 - t0) * 1000)
+    timings["suggest_check"] = round((t2 - t1) * 1000)
 
     # STEP D: 출처 목록 병합
     sources = []
