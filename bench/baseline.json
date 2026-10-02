@@ -1,0 +1,246 @@
+{
+  "summary": {
+    "law_search": {
+      "p50": 45,
+      "p95": 73
+    },
+    "hazard_search": {
+      "p50": 44,
+      "p95": 56
+    },
+    "llm": {
+      "p50": 25428,
+      "p95": 33002
+    },
+    "suggest_check": {
+      "p50": 184,
+      "p95": 245
+    },
+    "total": {
+      "p50": 25700,
+      "p95": 33271
+    }
+  },
+  "records": [
+    {
+      "query": "네일샵 개설하려면 어떤 신고가 필요한가요?",
+      "sector": "위생관리",
+      "timings": {
+        "law_search": 50,
+        "hazard_search": 45,
+        "llm": 22244,
+        "suggest_check": 245,
+        "total": 22585
+      }
+    },
+    {
+      "query": "수건을 손님마다 교체하지 않으면 처벌받나요?",
+      "sector": "위생관리",
+      "timings": {
+        "law_search": 46,
+        "hazard_search": 45,
+        "llm": 15521,
+        "suggest_check": 0,
+        "total": 15612
+      }
+    },
+    {
+      "query": "발마사지샵을 개설하려면 어떤 절차가 필요한가요?",
+      "sector": "위생관리",
+      "timings": {
+        "law_search": 90,
+        "hazard_search": 55,
+        "llm": 23173,
+        "suggest_check": 184,
+        "total": 23502
+      }
+    },
+    {
+      "query": "미용사 면허가 취소되는 경우는 어떤 게 있나요?",
+      "sector": "위생관리",
+      "timings": {
+        "law_search": 39,
+        "hazard_search": 47,
+        "llm": 27253,
+        "suggest_check": 211,
+        "total": 27550
+      }
+    },
+    {
+      "query": "위생교육을 안 받으면 어떤 불이익이 있나요?",
+      "sector": "위생관리",
+      "timings": {
+        "law_search": 53,
+        "hazard_search": 42,
+        "llm": 14422,
+        "suggest_check": 0,
+        "total": 14516
+      }
+    },
+    {
+      "query": "프랜차이즈로 샵을 여러 개 운영해도 되나요?",
+      "sector": "위생관리",
+      "timings": {
+        "law_search": 73,
+        "hazard_search": 56,
+        "llm": 30955,
+        "suggest_check": 233,
+        "total": 31317
+      }
+    },
+    {
+      "query": "화장품 광고에 '주름 개선'이라고 써도 되나요?",
+      "sector": "화장품규제",
+      "timings": {
+        "law_search": 45,
+        "hazard_search": 52,
+        "llm": 17086,
+        "suggest_check": 0,
+        "total": 17183
+      }
+    },
+    {
+      "query": "아토피 개선 효과를 표방해도 되나요?",
+      "sector": "화장품규제",
+      "timings": {
+        "law_search": 66,
+        "hazard_search": 52,
+        "llm": 29828,
+        "suggest_check": 234,
+        "total": 30180
+      }
+    },
+    {
+      "query": "화장품을 소분해서 판매해도 되나요?",
+      "sector": "화장품규제",
+      "timings": {
+        "law_search": 38,
+        "hazard_search": 43,
+        "llm": 24016,
+        "suggest_check": 185,
+        "total": 24283
+      }
+    },
+    {
+      "query": "제조번호를 표시하지 않은 화장품을 팔아도 되나요?",
+      "sector": "화장품규제",
+      "timings": {
+        "law_search": 45,
+        "hazard_search": 50,
+        "llm": 16827,
+        "suggest_check": 0,
+        "total": 16922
+      }
+    },
+    {
+      "query": "사용제한 원료 기준을 초과해서 사용하면 어떻게 되나요?",
+      "sector": "화장품규제",
+      "timings": {
+        "law_search": 73,
+        "hazard_search": 69,
+        "llm": 30184,
+        "suggest_check": 173,
+        "total": 30498
+      }
+    },
+    {
+      "query": "표시광고 심의를 받지 않고 광고해도 되나요?",
+      "sector": "화장품규제",
+      "timings": {
+        "law_search": 36,
+        "hazard_search": 42,
+        "llm": 27693,
+        "suggest_check": 231,
+        "total": 28003
+      }
+    },
+    {
+      "query": "왁싱은 의료행위에 해당하나요?",
+      "sector": "의료행위",
+      "timings": {
+        "law_search": 45,
+        "hazard_search": 40,
+        "llm": 33002,
+        "suggest_check": 183,
+        "total": 33271
+      }
+    },
+    {
+      "query": "고주파 리프팅 기기 시술은 에스테틱 샵에서 해도 되나요?",
+      "sector": "의료행위",
+      "timings": {
+        "law_search": 42,
+        "hazard_search": 42,
+        "llm": 27710,
+        "suggest_check": 178,
+        "total": 27972
+      }
+    },
+    {
+      "query": "간호사가 에스테틱 샵에서 시술해도 되나요?",
+      "sector": "의료행위",
+      "timings": {
+        "law_search": 38,
+        "hazard_search": 41,
+        "llm": 25256,
+        "suggest_check": 200,
+        "total": 25534
+      }
+    },
+    {
+      "query": "침 시술을 에스테틱 샵에서 해도 되나요?",
+      "sector": "의료행위",
+      "timings": {
+        "law_search": 37,
+        "hazard_search": 41,
+        "llm": 25735,
+        "suggest_check": 180,
+        "total": 25994
+      }
+    },
+    {
+      "query": "인스타에 여드름 치료 전문샵이라고 써도 되나요?",
+      "sector": null,
+      "timings": {
+        "law_search": 42,
+        "hazard_search": 44,
+        "llm": 25428,
+        "suggest_check": 186,
+        "total": 25700
+      }
+    },
+    {
+      "query": "체험단 이벤트로 시술 전후 사진을 올려도 되나요?",
+      "sector": null,
+      "timings": {
+        "law_search": 40,
+        "hazard_search": 41,
+        "llm": 26513,
+        "suggest_check": 256,
+        "total": 26849
+      }
+    },
+    {
+      "query": "파라벤이 함유된 화장품 사용해도 안전한가요?",
+      "sector": null,
+      "timings": {
+        "law_search": 56,
+        "hazard_search": 48,
+        "llm": 37589,
+        "suggest_check": 224,
+        "total": 37918
+      }
+    },
+    {
+      "query": "포름알데히드가 함유된 제품이 회수된 적 있나요?",
+      "sector": null,
+      "timings": {
+        "law_search": 36,
+        "hazard_search": 37,
+        "llm": 20005,
+        "suggest_check": 0,
+        "total": 20078
+      }
+    }
+  ]
+}
