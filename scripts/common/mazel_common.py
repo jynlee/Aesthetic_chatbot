@@ -58,6 +58,8 @@ def loadConfig():
         'ollamaHost': os.getenv("OLLAMA_HOST",  "http://localhost:11434"),
         'embedModel': os.getenv("EMBED_MODEL",  "bge-m3"),
         'llmModel':   os.getenv("LLM_MODEL",    "gemma4:e4b"),
+        # LLM 내부 thinking 사용 여부. false면 Ollama에 think=false를 보내 생각 토큰 없이 바로 답변
+        'llmThink':   os.getenv("LLM_THINK",    "true").strip().lower() in ("1", "true", "yes", "on"),
 
         # Redis (질문-답변 시맨틱 캐시)
         'redisHost':        os.getenv("REDIS_HOST",     "localhost"),

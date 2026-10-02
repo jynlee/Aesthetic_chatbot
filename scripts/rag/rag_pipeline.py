@@ -478,12 +478,17 @@ def generateAnswer(cfg, prompt, stream=False):
             "num_ctx":     8192,
             # num_predict(생성 토큰 상한)는 2026-07-08에 400으로 시도했다가 되돌림 —
             # 이 모델은 답변 내용을 쓰기 전에 내부적으로 소모하는 토큰 수가 질문마다
-            # 들쭉날쭉해서(실측 최대 287토큰, isSuggestionGrounded 관련 실험 참고),
+            # 들쭉날쭉해서(2026-10-02 Ollama 0.35 실측: 생성 1,008토큰 중 약 840토큰이 thinking),
             # 400 상한에 걸리면 "생각" 중간에 잘려 완전히 빈 답변이 나오는 사례가 실측됨.
             # 상한을 걸려면 800~1200 이상으로 충분히 크게 잡고 빈 답변 여부를 다시
             # 검증해야 하며, 느려도 빈 답변보다는 안전하므로 상한 없이 되돌린다.
         }
     }
+    # thinking은 응답 시간의 대부분을 차지한다(같은 질문 22.1s → think=false 5.3s).
+    # 기본값(LLM_THINK=true)은 think 필드를 아예 보내지 않아 기존 동작을 그대로 유지한다 —
+    # thinking을 지원하지 않는 모델에 think=true를 보내면 Ollama가 오류를 내기 때문.
+    if not cfg.get('llmThink', True):
+        payload["think"] = False
 
     resp = requests.post(url, json=payload, timeout=300)
     resp.raise_for_status()

@@ -14,6 +14,10 @@ QA 캐시를 거치지 않고 runCombinedRag()를 직접 호출하므로, "캐�
   python bench_latency.py                          # 법령·안전정보 FAQ에서 고르게 20건
   python bench_latency.py --n 30 --out baseline.json
   python bench_latency.py --compare baseline.json  # 이전 결과와 p50/p95 비교
+  python bench_latency.py --think off --out think_off.json  # .env의 LLM_THINK를 이번 실행만 덮어씀
+
+레코드마다 답변(summary/points/list_items/raw_fallback/suggestions)도 저장하므로,
+설정을 바꿨을 때 속도뿐 아니라 답변 품질도 질문별로 나란히 비교할 수 있다.
 """
 
 # ============================================================
@@ -40,6 +44,7 @@ from warm_cache    import LAW_FAQS, HAZARD_FAQS
 # ============================================================
 
 STAGES = ["law_search", "hazard_search", "llm", "suggest_check", "total"]
+ANSWER_FIELDS = ["summary", "points", "list_items", "raw_fallback", "suggestions", "sources"]
 
 
 # ============================================================
@@ -77,12 +82,14 @@ def runBench(osClient, cfg, questions):
         timings = {}
         start   = time.perf_counter()
         try:
-            runCombinedRag(osClient, cfg, item["query"], sector=item["sector"], timings=timings)
+            result = runCombinedRag(osClient, cfg, item["query"], sector=item["sector"], timings=timings)
         except Exception as e:
             print(f"  [{i+1}/{len(questions)}] 실패: {item['query']} — {e}")
             continue
         timings["total"] = round((time.perf_counter() - start) * 1000)
-        records.append({"query": item["query"], "sector": item["sector"], "timings": timings})
+        answer = {k: result.get(k) for k in ANSWER_FIELDS}
+        records.append({"query": item["query"], "sector": item["sector"], "timings": timings,
+                        "answer": answer})
         stages = " ".join(f"{k}={timings.get(k, 0)}" for k in STAGES)
         print(f"  [{i+1}/{len(questions)}] {stages}  {item['query']}")
     return records
@@ -116,14 +123,18 @@ def main():
     parser.add_argument("--n",       type=int, default=20, help="측정할 질문 수 (기본 20)")
     parser.add_argument("--out",     default=None, help="결과를 저장할 JSON 경로")
     parser.add_argument("--compare", default=None, help="비교할 이전 결과 JSON 경로")
+    parser.add_argument("--think",   choices=["on", "off"], default=None,
+                        help="LLM thinking 사용 여부 (미지정 시 .env의 LLM_THINK)")
     args = parser.parse_args()
 
     cfg      = loadConfig()
+    if args.think:
+        cfg['llmThink'] = (args.think == "on")
     osClient = getOsClient(cfg)
     ensurePipeline(osClient)
 
     questions = pickQuestions(args.n)
-    print(f"[벤치마크] 질문 {len(questions)}건 (QA 캐시 미사용)")
+    print(f"[벤치마크] 질문 {len(questions)}건 (QA 캐시 미사용, model={cfg['llmModel']}, think={cfg['llmThink']})")
 
     # 첫 호출은 Ollama 모델 로딩 시간이 섞이므로 워밍업 1회 후 측정
     print("[워밍업] 모델 로딩용 1회 호출")
@@ -140,7 +151,9 @@ def main():
 
     if args.out:
         with io.open(args.out, "w", encoding="utf-8") as f:
-            json.dump({"summary": summary, "records": records}, f, ensure_ascii=False, indent=2)
+            config = {"llm_model": cfg['llmModel'], "llm_think": cfg['llmThink']}
+            json.dump({"config": config, "summary": summary, "records": records},
+                      f, ensure_ascii=False, indent=2)
         print(f"\n[저장] {args.out}")
 
 
