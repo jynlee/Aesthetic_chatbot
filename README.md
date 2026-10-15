@@ -165,9 +165,3 @@ OpenSearch → Ollama → PostgreSQL → Redis → FastAPI → Spring MVC
 
 ---
 
-## 개발자
-
-| 이름 | 역할 |
-|---|---|
-| 장준혁 | RAG 파이프라인, Spring MVC, 법령 수집 |
-| 이주연 | 임베딩, 검색, UI |
